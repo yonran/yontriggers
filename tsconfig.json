@@ -1,0 +1,17 @@
+{
+    "extends": "@tsconfig/node18-strictest-esm/tsconfig.json",
+    "compilerOptions": {
+        // https://blog.cloudflare.com/automatically-generated-types/
+        // "target": "ES2020",
+        // "module": "ES2022",
+        // "lib": ["ES2020"],
+        // "types": ["@cloudflare/workers-types"],
+
+        // disable exactOptionalPropertyTypes; cloudflare typings aren't designed for it
+        // "exactOptionalPropertyTypes": false,
+        "rootDir": "src",
+        "outDir": "lib",
+        "resolveJsonModule": true,
+    },
+    "exclude": ["lib", "src/test"]
+}
