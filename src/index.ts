@@ -4,7 +4,9 @@
 // must be the package.json main
 // https://cloud.google.com/functions/docs/writing#directory-structure
 
+import type { MessagePublishedData } from '@google/events/cloud/pubsub/v1/MessagePublishedData';
 import type {
+    CloudEvent,
     Request as ExpressRequest,
     Response as ExpressResponse,
 } from '@google-cloud/functions-framework';
@@ -122,4 +124,13 @@ app.get(REDIRECT_PATH, (req, res, next) => {
     })().catch(next);
 });
 
+// “If you use a CloudEvent function,
+// the Pub/Sub event data is passed to your function in the CloudEvents format
+// and the CloudEvent data payload is of type MessagePublishedData”
+// https://cloud.google.com/functions/docs/calling/pubsub
+function pubsubHandler(cloudEvent: CloudEvent<MessagePublishedData>) {
+    cloudEvent.data?.message?.data;
+}
+
 functions.http('oauthHandler', app);
+functions.cloudEvent('pubsubHandler', pubsubHandler);

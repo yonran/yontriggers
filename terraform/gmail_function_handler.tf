@@ -39,8 +39,13 @@ data "google_iam_policy" "function" {
 
 
 
-resource "google_cloudfunctions2_function" "function" {
-  name        = "gcf-function"
+# Function that has a HTTP trigger
+# Note: we have to create a separate function with the same code
+# for Pub/Sub below because
+# “You cannot bind the same function to more than one trigger at a time”
+# https://cloud.google.com/functions/docs/calling
+resource "google_cloudfunctions2_function" "http_function" {
+  name        = "gmail-handler-http"
   location    = "us-central1"
   description = "a new function"
 
@@ -84,18 +89,74 @@ resource "google_cloudfunctions2_function" "function" {
     service_account_email = google_service_account.account.email
   }
 
-  # event_trigger {
-  #   trigger_region = "us-central1"
-  #   event_type = "google.cloud.pubsub.topic.v1.messagePublished"
-  #   pubsub_topic = google_pubsub_topic.topic.id
-  #   retry_policy = "RETRY_POLICY_RETRY"
-  # }
   depends_on = [
     google_project_service.cloudfunctions,
     google_project_service.cloudrun,
     google_project_service.artifactregistry,
     google_project_service.cloudbuild,
+  ]
+}
+# Function that has a Pub/Sub trigger
+# Note: we have to create a separate function with the same code
+# for HTTP above because
+# “You cannot bind the same function to more than one trigger at a time”
+# https://cloud.google.com/functions/docs/calling
+resource "google_cloudfunctions2_function" "pubsub_function" {
+  name        = "gmail-handler-pubsub"
+  location    = "us-central1"
+  description = "a new function"
 
+  build_config {
+    runtime     = "nodejs18"
+    entry_point = "pubsubHandler" # Set the entry point 
+    environment_variables = {
+    }
+    source {
+      storage_source {
+        bucket = google_storage_bucket.bucket.name
+        object = google_storage_bucket_object.source.name
+      }
+    }
+  }
+
+  service_config {
+    max_instance_count = 100
+    min_instance_count = 0
+    # minimum availableMemory is 128MiB
+    # https://cloud.google.com/functions/pricing#compute_time
+    available_memory = "256Mi"
+    timeout_seconds  = 60
+    # number of concurrent requests that one instance can handle
+    # https://cloud.google.com/functions/docs/configuring/concurrency
+    # Total cpu < 1 is not supported with concurrency > 1.
+    max_instance_request_concurrency = 1
+    environment_variables = {
+      SERVICE_CONFIG_TEST = "config_test"
+    }
+    secret_environment_variables {
+      key        = "SECRET"
+      project_id = google_secret_manager_secret.secret.project
+      secret     = google_secret_manager_secret.secret.secret_id
+      version    = "latest"
+    }
+    # allow requests from public internet
+    ingress_settings               = "ALLOW_INTERNAL_ONLY"
+    all_traffic_on_latest_revision = true
+    # use custom account instead of PROJECTNUM-compute@developer.gserviceaccount.com
+    service_account_email = google_service_account.account.email
+  }
+
+  event_trigger {
+    trigger_region = "us-central1"
+    event_type = "google.cloud.pubsub.topic.v1.messagePublished"
+    pubsub_topic = google_pubsub_topic.topic.id
+    retry_policy = "RETRY_POLICY_RETRY"
+  }
+  depends_on = [
+    google_project_service.cloudfunctions,
+    google_project_service.cloudrun,
+    google_project_service.artifactregistry,
+    google_project_service.cloudbuild,
   ]
 }
 

@@ -24,6 +24,7 @@ const SCOPES = [
     'openid',
     'email',
     'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.modify',
 ];
 
 const UserKeyType = t.strict(
