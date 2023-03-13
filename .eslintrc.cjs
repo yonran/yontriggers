@@ -7,10 +7,11 @@ module.exports = {
     },
     overrides: [
         {
-            files: ['*.cjs', '*.mjs'],
+            files: ['*.cjs'],
         },
         {
             files: ['*.mjs'],
+            // to fix Parsing error: The keyword 'import' is reserved
             parser: 'babel-eslint',
         },
         {
@@ -32,5 +33,5 @@ module.exports = {
         },
     ],
     root: true,
-    ignorePatterns: ['!.prettierrc.cjs'],
+    ignorePatterns: ['!.prettierrc.cjs', '!.mocharc.cjs'],
 };

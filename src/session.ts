@@ -13,9 +13,9 @@ import type {
 import jsonwebtoken from 'jsonwebtoken';
 import { callbackify, promisify } from 'util';
 
-import { LATEST_SESSION_KEY, SESSION_KEYS } from './secret';
-import type { Session } from './types';
-import { SessionType } from './types';
+import { LATEST_SESSION_KEY, SESSION_KEYS } from './secret.js';
+import type { Session } from './types.js';
+import { SessionType } from './types.js';
 export function createSessionCookie(payload: Session) {
     return jsonwebtoken.sign(payload, LATEST_SESSION_KEY.privateKey, {
         algorithm: 'ES384',

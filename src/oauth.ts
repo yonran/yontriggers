@@ -1,6 +1,10 @@
 // based on https://developers.google.com/gmail/api/quickstart/nodejs
 import type { Firestore } from 'firebase-admin/firestore';
-import type { Credentials } from 'google-auth-library';
+import type {
+    Credentials,
+    OAuth2ClientOptions,
+    UserRefreshClientOptions,
+} from 'google-auth-library';
 import { OAuth2Client, UserRefreshClient } from 'google-auth-library';
 import { google } from 'googleapis';
 import * as t from 'io-ts';
@@ -36,20 +40,30 @@ function databaseId(jwtPayload: UserKey): string {
 }
 
 /**
- * Reads previously authorized credentials from firestore.
+ * Reads previously authorized OAuth2 credentials from firestore.
  */
 export async function loadSavedCredentialsIfExist(
     firestore: Firestore,
     userId: string
-): Promise<UserRefreshClient | undefined> {
+): Promise<OAuth2Client | undefined> {
     const user = await firestore.collection('google-auth').doc(userId).get();
     if (user.exists) {
         const userData = decodeAs(UserType, user.data());
-        return new UserRefreshClient({
-            clientId: SECRET.client_id,
-            clientSecret: SECRET.client_secret,
-            refreshToken: userData.token.refresh_token,
-        });
+        if (userData.token.refresh_token !== undefined) {
+            const options: UserRefreshClientOptions = {
+                clientId: SECRET.client_id,
+                clientSecret: SECRET.client_secret,
+                refreshToken: userData.token.refresh_token,
+            };
+            return new UserRefreshClient(options);
+        } else {
+            // google excludes refresh_token in testing
+            const options: OAuth2ClientOptions = {
+                clientId: SECRET.client_id,
+                clientSecret: SECRET.client_secret,
+            };
+            return new OAuth2Client(options);
+        }
     } else {
         return undefined;
     }
@@ -88,17 +102,23 @@ export async function handleRedirectRequest(appBaseUrl: URL, firestore: Firestor
     if (tokens.id_token == null) {
         throw new Error('id_token null (even though I did request openid scope)');
     }
+
+    // verifyIdToken fetches google’s OAuth2 certs
+    // from https://www.googleapis.com/oauth2/v1/certs,
+    // verifies that the idToken JWT was signed by one of the certs,
+    // verifies that it is not expired
+    // (assuming that system clock is within 5 minutes of correct)
+    // and verifies that the issuer (iss) is [https://]accounts.google.com
     const loginTicket = await client.verifyIdToken({ idToken: tokens.id_token });
-    const issuer = loginTicket.getPayload()?.iss;
-    if (issuer !== 'https://accounts.google.com') {
-        throw new Error(
-            `unexpected issuer:${String(issuer)}; expected https://accounts.google.com`
-        );
+    const payload = loginTicket.getPayload();
+    if (payload == null) {
+        throw new Error('no payload found in LoginTicket (should never happen)');
     }
     const userId = loginTicket.getUserId(); // aka payload.sub
     if (userId == null || userId.length === 0) {
         throw new Error('no user id (sub) found in the id_token');
     }
+    const issuer = payload.iss;
     const userKey: UserKey = { iss: issuer, sub: userId };
     const user: User = {
         sub: userId,

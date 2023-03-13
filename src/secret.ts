@@ -1,11 +1,15 @@
-import type { KeyObject, webcrypto } from 'crypto';
+import type { KeyObject } from 'crypto';
 import { createPrivateKey, createPublicKey } from 'crypto';
+import createDebug from 'debug';
 
 import type { Secret } from './types.js';
 import { SecretType } from './types.js';
 import { assertDefined, decodeAs } from './util.js';
+
+const debug = createDebug('yontriggers:secret');
 function readSecret(): Secret {
     const secret = decodeAs(SecretType, JSON.parse(process.env['SECRET'] ?? ''));
+    debug('read secret with %s session_keys', secret.session_secret.keys.length);
     return secret;
 }
 export const SECRET = readSecret();
@@ -17,7 +21,8 @@ export interface SessionKey {
 }
 
 function getSessionKeys(): SessionKey[] {
-    // webcrypto api is less useful (no api to convert private key to public key,
+    // webcrypto api is less useful than nodejs crypto
+    // (no api to convert private key to public key,
     // and jsonwebtoken does not use it anyway, and it is async)
     // await webcrypto.subtle.importKey(
     //     'jwk',

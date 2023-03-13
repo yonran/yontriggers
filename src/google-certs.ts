@@ -1,4 +1,3 @@
-import { OAuth2Client } from 'google-auth-library';
 import type {
     GetPublicKeyOrSecret,
     JwtHeader,
@@ -29,17 +28,17 @@ async function getJwtKeyHelper(header: JwtHeader): Promise<Secret> {
 export const getJwtKey: GetPublicKeyOrSecret = callbackify(getJwtKeyHelper);
 
 /**
+ * This is more or less like
+ * import type { OAuth2Client } from 'google-auth-library';
+ * client.verifyIdToken so we will use that instead.
  * extract the google user id from the id_token
  * https://developers.google.com/identity/openid-connect/openid-connect#obtainuserinfo
  * @param id_token
  * @returns
  */
 export async function verifyAndGetGoogleUserId(
-  oauth2client: OAuth2Client,
     id_token: string | null | undefined
-): Promise<string> {  
-  oauth2client.verifyIdToken({idToken})
-  getTokenInfo;
+): Promise<string> {
     if (id_token == null) {
         throw new Error('google returned a null id_token');
     }

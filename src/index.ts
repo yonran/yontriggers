@@ -10,6 +10,7 @@ import type {
 } from '@google-cloud/functions-framework';
 import * as functions from '@google-cloud/functions-framework';
 import { authenticate } from '@google-cloud/local-auth';
+import cookieParser from 'cookie-parser';
 import escapeHtml from 'escape-html';
 import express, { NextFunction } from 'express';
 import firebaseAdmin from 'firebase-admin';
@@ -17,13 +18,8 @@ import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { isRight } from 'fp-ts/lib/Either.js';
 import type { AddressInfo } from 'net';
 
-import cookieParser from 'cookie-parser'
 import { getConsentPageUrl, handleRedirectRequest, REDIRECT_PATH } from './oauth.js';
-import {
-    createSessionCookie,
-    verifySessionCookie,
-    verifySessionCookieOrUndefined,
-} from './session.js';
+import { createSessionCookie, verifySessionCookie } from './session.js';
 import type { Session } from './types.js';
 
 declare global {
